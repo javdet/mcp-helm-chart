@@ -1,0 +1,62 @@
+name: Release Charts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Chart.yaml'
+      - 'values.yaml'
+      - 'templates/**'
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Create gh-pages dir if missing
+        run: mkdir -p gh-pages
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Package chart
+        run: helm package source/ -d gh-pages/
+
+      - name: Build repo index
+        run: |
+          helm repo index gh-pages/ \
+            --url https://javdet.github.io/mcp-helm-chart \
+            --merge gh-pages/index.yaml || \
+          helm repo index gh-pages/ \
+            --url https://javdet.github.io/mcp-helm-chart
+
+      - name: Push to gh-pages
+        run: |
+          cd gh-pages
+          git init 2>/dev/null || true
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" 2>/dev/null || true
+          git checkout -B gh-pages
+          cp ../source/artifacthub-repo.yml . 2>/dev/null || true
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Release chart $(grep '^version:' ../source/Chart.yaml | awk '{print $2}')"
+          git push -f origin gh-pages
