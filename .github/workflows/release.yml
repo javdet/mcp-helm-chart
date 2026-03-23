@@ -4,10 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Chart.yaml'
-      - 'values.yaml'
-      - 'templates/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,44 +16,52 @@ jobs:
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
-        with:
-          path: source
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint .
+
+      - name: Package chart
+        run: |
+          mkdir -p .cr-release-packages
+          helm package . -d .cr-release-packages/
+          ls -la .cr-release-packages/
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
           ref: gh-pages
-          path: gh-pages
-          fetch-depth: 0
+          path: .gh-pages
+          fetch-depth: 1
         continue-on-error: true
 
-      - name: Create gh-pages dir if missing
-        run: mkdir -p gh-pages
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-
-      - name: Package chart
-        run: helm package source/ -d gh-pages/
-
-      - name: Build repo index
+      - name: Build repository index
         run: |
-          helm repo index gh-pages/ \
-            --url https://javdet.github.io/mcp-helm-chart \
-            --merge gh-pages/index.yaml || \
-          helm repo index gh-pages/ \
-            --url https://javdet.github.io/mcp-helm-chart
+          mkdir -p .gh-pages
+          cp .cr-release-packages/*.tgz .gh-pages/
 
-      - name: Push to gh-pages
-        run: |
-          cd gh-pages
-          git init 2>/dev/null || true
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" 2>/dev/null || true
-          git checkout -B gh-pages
-          cp ../source/artifacthub-repo.yml . 2>/dev/null || true
-          git add -A
-          git diff --cached --quiet && echo "No changes" && exit 0
-          git commit -m "Release chart $(grep '^version:' ../source/Chart.yaml | awk '{print $2}')"
-          git push -f origin gh-pages
+          if [ -f .gh-pages/index.yaml ]; then
+            helm repo index .gh-pages/ \
+              --url https://javdet.github.io/mcp-helm-chart \
+              --merge .gh-pages/index.yaml
+          else
+            helm repo index .gh-pages/ \
+              --url https://javdet.github.io/mcp-helm-chart
+          fi
+
+          cp artifacthub-repo.yml .gh-pages/ 2>/dev/null || true
+          touch .gh-pages/.nojekyll
+
+          echo "--- index.yaml ---"
+          cat .gh-pages/index.yaml
+          echo "--- files ---"
+          ls -la .gh-pages/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./.gh-pages
+          keep_files: false
