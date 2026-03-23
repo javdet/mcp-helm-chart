@@ -1,0 +1,4 @@
+repositoryID: # will be assigned by Artifact Hub after first sync
+owners:
+  - name: javdet
+    email: javdetserg@gmail.com

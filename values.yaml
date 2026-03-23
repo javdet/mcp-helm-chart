@@ -1,0 +1,308 @@
+---
+## @section Deployment mode
+## @param mode Deployment mode: "direct" for MCP servers with native HTTP support,
+## "proxy" for stdio-only servers wrapped by supergateway
+mode: direct
+
+## @section Common parameters
+## @param replicaCount Number of pod replicas
+replicaCount: 1
+
+## @param containerPort Port the MCP server listens on inside the container
+containerPort: 8080
+
+## @param nameOverride Override the chart name
+nameOverride: ""
+
+## @param fullnameOverride Override the full release name
+fullnameOverride: ""
+
+## @section Direct mode image configuration
+## Used when mode=direct. Provide the MCP server image that natively supports HTTP.
+## Example: grafana/mcp-grafana, zereight050/gitlab-mcp
+image:
+  ## @param image.repository Container image repository
+  repository: ""
+  ## @param image.tag Container image tag (immutable tags are recommended)
+  tag: ""
+  ## @param image.pullPolicy Image pull policy
+  pullPolicy: IfNotPresent
+
+## @param imagePullSecrets Registry credentials for private images
+imagePullSecrets: []
+# - name: my-registry-secret
+
+## @param command Override the container entrypoint (direct mode)
+command: []
+# - "/usr/bin/mcp-server"
+
+## @param args Override the container arguments (direct mode)
+args: []
+# - "-t"
+# - "streamable-http"
+# - "--address"
+# - "0.0.0.0:8080"
+
+## @section Proxy mode configuration
+## Used when mode=proxy. Runs a Node.js container with supergateway to wrap
+## stdio-only MCP servers into an HTTP-compatible transport.
+proxy:
+  image:
+    ## @param proxy.image.repository Proxy container image repository
+    repository: node
+    ## @param proxy.image.tag Proxy container image tag
+    tag: "20-slim"
+    ## @param proxy.image.pullPolicy Proxy image pull policy
+    pullPolicy: IfNotPresent
+  gateway:
+    ## @param proxy.gateway.package NPM package used as the HTTP gateway
+    package: "@michlyn/mcpgateway"
+    ## @param proxy.gateway.stdioCommand The stdio MCP command to wrap
+    ## Example: "npx -y kubernetes-mcp-server@latest"
+    ## Example: "npx -y @digitalocean/mcp --services apps,droplets,doks,networking"
+    stdioCommand: ""
+    ## @param proxy.gateway.outputTransport HTTP transport protocol exposed by the gateway
+    outputTransport: streamable-http
+    ## @param proxy.gateway.port Port the gateway listens on (should match containerPort)
+    port: 8080
+    ## @param proxy.gateway.httpPath HTTP path for the MCP endpoint
+    httpPath: /mcp
+
+## @section Environment variables
+## @param env Extra environment variables injected into the container
+env: []
+# - name: GRAFANA_URL
+#   value: "https://grafana.example.com"
+# - name: API_TOKEN
+#   valueFrom:
+#     secretKeyRef:
+#       name: my-secret
+#       key: token
+
+## @param envFrom Extra envFrom sources (configMapRef, secretRef) injected into the container
+envFrom: []
+# - secretRef:
+#     name: my-external-secret
+# - configMapRef:
+#     name: my-configmap
+
+## @section Secret
+## Optionally create a Kubernetes Secret and inject it via envFrom
+secret:
+  ## @param secret.enabled Create a Secret resource and mount it via envFrom
+  enabled: false
+  ## @param secret.annotations Annotations added to the Secret
+  annotations: {}
+  ## @param secret.data Key-value pairs stored as stringData in the Secret
+  data: {}
+  # GRAFANA_SERVICE_ACCOUNT_TOKEN: "my-token"
+  # DIGITALOCEAN_API_TOKEN: "my-token"
+
+## @section Service
+service:
+  ## @param service.type Kubernetes Service type
+  type: ClusterIP
+  ## @param service.port Service port (maps to containerPort on the pod)
+  port: 80
+
+## @section Ingress
+ingress:
+  ## @param ingress.enabled Enable Ingress resource creation
+  enabled: false
+  ## @param ingress.className IngressClass name
+  className: ""
+  ## @param ingress.annotations Annotations for the Ingress resource
+  ## For Streamable HTTP (SSE) with nginx ingress controller, add:
+  ##   nginx.ingress.kubernetes.io/proxy-buffering: "off"
+  ##   nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+  ##   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  ##   nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  annotations: {}
+  # nginx.ingress.kubernetes.io/proxy-buffering: "off"
+  # nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+  # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  ## @param ingress.hosts Ingress host rules
+  hosts: []
+  # - host: mcp.example.com
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  ## @param ingress.tls TLS configuration for the Ingress
+  tls: []
+  # - secretName: mcp-tls
+  #   hosts:
+  #     - mcp.example.com
+
+## @section Gateway API (HTTPRoute)
+## Alternative to Ingress using the Kubernetes Gateway API.
+## Requires a Gateway resource to be deployed separately.
+gatewayApi:
+  ## @param gatewayApi.enabled Enable HTTPRoute resource creation
+  enabled: false
+  ## @param gatewayApi.annotations Annotations for the HTTPRoute resource
+  annotations: {}
+  ## @param gatewayApi.parentRefs References to the parent Gateway resource(s)
+  parentRefs: []
+  # - name: my-gateway
+  #   namespace: gateway-system
+  #   sectionName: https
+  ## @param gatewayApi.hostnames Hostnames matched by this HTTPRoute
+  hostnames: []
+  # - mcp.example.com
+  ## @param gatewayApi.timeouts Default timeouts applied to all rules (Gateway API v1)
+  ## For Streamable HTTP (SSE), increase timeouts to keep long-lived connections alive.
+  ## Per-rule timeouts in gatewayApi.rules[].timeouts take precedence.
+  timeouts: {}
+  # request: "3600s"
+  # backendRequest: "3600s"
+  ## @param gatewayApi.rules Routing rules (backendRefs defaults to chart service if omitted)
+  rules: []
+  # - matches:
+  #     - path:
+  #         type: PathPrefix
+  #         value: /
+  #   timeouts:
+  #     request: "3600s"
+  #     backendRequest: "3600s"
+  #   filters: []
+  #   backendRefs: []
+
+## @section ServiceAccount
+serviceAccount:
+  ## @param serviceAccount.create Create a ServiceAccount resource
+  create: true
+  ## @param serviceAccount.name Override ServiceAccount name (defaults to fullname)
+  name: ""
+  ## @param serviceAccount.annotations Annotations added to the ServiceAccount
+  annotations: {}
+  ## @param serviceAccount.automountServiceAccountToken Mount the API token into pods
+  automountServiceAccountToken: true
+
+## @section Autoscaling
+autoscaling:
+  ## @param autoscaling.enabled Enable HorizontalPodAutoscaler
+  enabled: false
+  ## @param autoscaling.minReplicas Minimum number of replicas
+  minReplicas: 1
+  ## @param autoscaling.maxReplicas Maximum number of replicas
+  maxReplicas: 5
+  ## @param autoscaling.metrics Autoscaling metric targets (autoscaling/v2 format)
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+  # - type: Resource
+  #   resource:
+  #     name: memory
+  #     target:
+  #       type: Utilization
+  #       averageUtilization: 80
+  ## @param autoscaling.behavior Scaling behavior policies (scale-up / scale-down)
+  behavior: {}
+  # scaleDown:
+  #   stabilizationWindowSeconds: 300
+  #   policies:
+  #     - type: Percent
+  #       value: 10
+  #       periodSeconds: 60
+  # scaleUp:
+  #   stabilizationWindowSeconds: 0
+  #   policies:
+  #     - type: Percent
+  #       value: 100
+  #       periodSeconds: 15
+  #     - type: Pods
+  #       value: 4
+  #       periodSeconds: 15
+  #   selectPolicy: Max
+
+## @section Resource management
+## @param resources CPU/memory resource requests and limits
+resources: {}
+# limits:
+#   cpu: 500m
+#   memory: 256Mi
+# requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+## @section Probes
+## Health checks for the MCP server container.
+## Set to empty map or false to disable individual probes.
+## Common health paths: /healthz (kubernetes-mcp-server), /health, /mcp (supergateway)
+## Use tcpSocket probe as a universal fallback if the MCP server has no health endpoint.
+probes:
+  ## @param probes.livenessProbe Liveness probe configuration
+  livenessProbe:
+    tcpSocket:
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+  ## @param probes.readinessProbe Readiness probe configuration
+  readinessProbe:
+    tcpSocket:
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+## @section Volumes
+## @param volumes Extra volumes to add to the pod
+volumes: []
+# - name: kubeconfig
+#   secret:
+#     secretName: kubeconfig-secret
+
+## @param volumeMounts Extra volume mounts for the container
+volumeMounts: []
+# - name: kubeconfig
+#   mountPath: /root/.kube/config
+#   readOnly: true
+
+## @section Pod scheduling
+## @param nodeSelector Node labels for pod assignment
+nodeSelector: {}
+
+## @param tolerations Tolerations for pod assignment
+tolerations: []
+
+## @param affinity Affinity rules for pod assignment
+affinity: {}
+
+## @section HashiCorp Vault (Banzai Cloud webhook)
+## When vault is enabled, Vault annotations are added to pods
+## so the Banzai Cloud mutating webhook can inject secrets.
+vault:
+  ## @param vault.enabled Enable Vault annotations on pods
+  enabled: false
+  ## @param vault.role Vault role used for Kubernetes authentication
+  role: ""
+  ## @param vault.path Vault auth backend mount path (e.g. kubernetes_dev)
+  path: ""
+
+## @section Pod metadata
+## @param podAnnotations Annotations added to each pod
+podAnnotations: {}
+
+## @param podLabels Extra labels added to each pod
+podLabels: {}
+
+## @section Security
+## @param podSecurityContext Pod-level security context
+podSecurityContext: {}
+# fsGroup: 1000
+
+## @param securityContext Container-level security context
+securityContext: {}
+# runAsNonRoot: true
+# runAsUser: 1000
+# readOnlyRootFilesystem: true

@@ -1,0 +1,34 @@
+---
+apiVersion: v2
+kubeVersion: '>=1.21.0-0'
+name: mcp
+version: 0.1.0
+appVersion: '1.0.0'
+description: Universal Helm chart for deploying MCP servers in direct or proxy (supergateway) mode
+home: https://github.com/javdet/mcp-helm-chart
+sources:
+  - https://github.com/javdet/mcp-helm-chart
+keywords:
+  - mcp
+  - model-context-protocol
+  - ai
+  - supergateway
+  - kubernetes
+  - llm
+  - gateway
+maintainers:
+  - name: javdet
+    url: https://github.com/javdet
+icon: https://raw.githubusercontent.com/javdet/mcp-helm-chart/main/icon.svg
+type: application
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/links: |
+    - name: Source
+      url: https://github.com/javdet/mcp-helm-chart
+    - name: MCP Protocol
+      url: https://modelcontextprotocol.io/
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release with direct and proxy deployment modes
+  artifacthub.io/containsSecurityUpdates: "false"

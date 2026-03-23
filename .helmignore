@@ -1,0 +1,31 @@
+# Patterns to ignore when building packages.
+.git
+.gitignore
+.cursor
+.vscode
+.idea
+*.swp
+*.bak
+*.tmp
+*~
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Documentation and examples
+example/
+*.md
+LICENSE
+
+# Artifact Hub
+artifacthub-repo.yml
+icon.svg
+
+# Environment-specific values
+values-*.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
