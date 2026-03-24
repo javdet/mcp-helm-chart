@@ -29,27 +29,21 @@ jobs:
           helm package . -d .cr-release-packages/
           ls -la .cr-release-packages/
 
-      - name: Checkout gh-pages
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: .gh-pages
-          fetch-depth: 1
-        continue-on-error: true
-
-      - name: Build repository index
+      - name: Build gh-pages content
         run: |
           mkdir -p .gh-pages
+
           cp .cr-release-packages/*.tgz .gh-pages/
 
-          if [ -f .gh-pages/index.yaml ]; then
+          # Fetch existing index.yaml to merge with (keeps old versions)
+          curl -fsSL https://javdet.github.io/mcp-helm-chart/index.yaml \
+            -o .gh-pages/old-index.yaml 2>/dev/null && \
             helm repo index .gh-pages/ \
               --url https://javdet.github.io/mcp-helm-chart \
-              --merge .gh-pages/index.yaml
-          else
+              --merge .gh-pages/old-index.yaml && \
+            rm -f .gh-pages/old-index.yaml || \
             helm repo index .gh-pages/ \
               --url https://javdet.github.io/mcp-helm-chart
-          fi
 
           cp artifacthub-repo.yml .gh-pages/ 2>/dev/null || true
           touch .gh-pages/.nojekyll
@@ -64,4 +58,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./.gh-pages
-          keep_files: false
+          force_orphan: true
