@@ -16,7 +16,8 @@
 
 # Documentation and examples
 example/
-*.md
+CHANGELOG.md
+CONTRIBUTING.md
 LICENSE
 
 # Artifact Hub

@@ -35,9 +35,7 @@ Chart label value: <name>-<version>
 Common labels applied to every resource.
 */}}
 {{- define "mcp.labels" -}}
-helm.sh/chart: {{ include "mcp.chart" . }}
 {{ include "mcp.selectorLabels" . }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
