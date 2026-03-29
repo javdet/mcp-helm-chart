@@ -2,6 +2,8 @@
 
 A universal Helm chart for deploying [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers on Kubernetes. Supports two deployment modes: **direct** for MCP servers with native HTTP transport, and **proxy** for stdio-only servers wrapped by an HTTP gateway.
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/mcp-helm-chart)](https://artifacthub.io/packages/search?repo=mcp-helm-chart)
+
 ## TL;DR
 
 ```bash

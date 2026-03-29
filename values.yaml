@@ -306,3 +306,12 @@ securityContext: {}
 # runAsNonRoot: true
 # runAsUser: 1000
 # readOnlyRootFilesystem: true
+## @section RBAC
+rbac:
+  ## @param rbac.create Create RBAC resources (ClusterRoleBinding, optionally ClusterRole)
+  create: false
+  ## @param rbac.clusterRole Use existing ClusterRole name (e.g. "view" for read-only).
+  ## If set, ClusterRoleBinding will reference this role instead of creating a new one.
+  clusterRole: ""
+  ## @param rbac.rules Custom ClusterRole rules (used only when rbac.clusterRole is empty)
+  rules: []
