@@ -168,6 +168,40 @@ gatewayApi:
   #   filters: []
   #   backendRefs: []
 
+  ## @section Gateway API Authentication (Envoy SecurityPolicy)
+  ## Creates a gateway.envoy.io/v1alpha1 SecurityPolicy targeting the HTTPRoute.
+  auth:
+    ## @param gatewayApi.auth.type Authentication type: "jwt", "apiKey", or "" (disabled)
+    type: ""
+    ## @param gatewayApi.auth.annotations Annotations for the SecurityPolicy resource
+    annotations: {}
+    ## JWT provider configuration (used when auth.type=jwt)
+    jwt:
+      ## @param gatewayApi.auth.jwt.providers List of JWT providers
+      providers: []
+      # - name: mcp-static-tokens
+      #   issuer: "https://theinfranod.com"
+      #   audiences:
+      #     - "mcp-servers"
+      #   localJWKS:
+      #     type: ValueRef
+      #     valueRef:
+      #       group: ""
+      #       kind: ConfigMap
+      #       name: jwks-config
+    ## API key configuration (used when auth.type=apiKey)
+    apiKey:
+      ## @param gatewayApi.auth.apiKey.extractFrom Headers from which to extract the API key
+      extractFrom:
+        headers:
+          - name: Authorization
+            valuePrefix: "Bearer "
+      ## @param gatewayApi.auth.apiKey.credentialRefs References to Secrets holding valid API keys
+      credentialRefs: []
+      # - group: ""
+      #   kind: Secret
+      #   name: mcp-api-keys
+
 ## @section ServiceAccount
 serviceAccount:
   ## @param serviceAccount.create Create a ServiceAccount resource

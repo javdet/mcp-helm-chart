@@ -191,6 +191,29 @@ volumeMounts:
 | `ingress.hosts` | Ingress host rules | `[]` |
 | `ingress.tls` | TLS configuration for the Ingress | `[]` |
 
+### Gateway API (HTTPRoute)
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `gatewayApi.enabled` | Enable HTTPRoute resource creation | `false` |
+| `gatewayApi.annotations` | Annotations for the HTTPRoute resource | `{}` |
+| `gatewayApi.parentRefs` | References to the parent Gateway resource(s) | `[]` |
+| `gatewayApi.hostnames` | Hostnames matched by this HTTPRoute | `[]` |
+| `gatewayApi.timeouts` | Default timeouts applied to all rules | `{}` |
+| `gatewayApi.rules` | Routing rules (backendRefs defaults to chart service if omitted) | `[]` |
+
+### Gateway API Authentication (Envoy SecurityPolicy)
+
+Creates a `gateway.envoy.io/v1alpha1` SecurityPolicy targeting the HTTPRoute. Supports JWT validation and API key authentication.
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `gatewayApi.auth.type` | Authentication type: `jwt`, `apiKey`, or `""` (disabled) | `""` |
+| `gatewayApi.auth.annotations` | Annotations for the SecurityPolicy resource | `{}` |
+| `gatewayApi.auth.jwt.providers` | List of JWT providers (used when `auth.type=jwt`) | `[]` |
+| `gatewayApi.auth.apiKey.extractFrom` | Headers from which to extract the API key (used when `auth.type=apiKey`) | Authorization Bearer |
+| `gatewayApi.auth.apiKey.credentialRefs` | References to Secrets holding valid API keys | `[]` |
+
 ### ServiceAccount
 
 | Parameter | Description | Default |
@@ -243,6 +266,71 @@ volumeMounts:
 | `podLabels` | Extra labels added to each pod | `{}` |
 | `podSecurityContext` | Pod-level security context | `{}` |
 | `securityContext` | Container-level security context | `{}` |
+
+## Gateway API Authentication
+
+When using the Gateway API with Envoy Gateway, you can protect your MCP servers with a `SecurityPolicy`. The chart supports two authentication modes.
+
+### JWT validation
+
+```yaml
+gatewayApi:
+  enabled: true
+  parentRefs:
+    - name: my-gateway
+      namespace: gateway-system
+      sectionName: https
+  hostnames:
+    - mcp.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+  auth:
+    type: jwt
+    jwt:
+      providers:
+        - name: mcp-static-tokens
+          issuer: "https://theinfranod.com"
+          audiences:
+            - "mcp-servers"
+          localJWKS:
+            type: ValueRef
+            valueRef:
+              group: ""
+              kind: ConfigMap
+              name: jwks-config
+```
+
+### API key authentication
+
+```yaml
+gatewayApi:
+  enabled: true
+  parentRefs:
+    - name: my-gateway
+      namespace: gateway-system
+      sectionName: https
+  hostnames:
+    - mcp.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+  auth:
+    type: apiKey
+    apiKey:
+      extractFrom:
+        headers:
+          - name: Authorization
+            valuePrefix: "Bearer "
+      credentialRefs:
+        - group: ""
+          kind: Secret
+          name: mcp-api-keys
+```
 
 ## How Proxy Mode Works
 
