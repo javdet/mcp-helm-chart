@@ -1,3 +1,4 @@
+{{- include "mcp.validateSecretsInjection" . }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -72,11 +73,15 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if or .Values.envFrom .Values.secret.enabled }}
+          {{- if or .Values.envFrom .Values.secret.enabled .Values.externalSecrets.enabled }}
           envFrom:
             {{- if .Values.secret.enabled }}
             - secretRef:
                 name: {{ include "mcp.fullname" . }}
+            {{- end }}
+            {{- if .Values.externalSecrets.enabled }}
+            - secretRef:
+                name: {{ include "mcp.externalSecretsTargetSecretName" . }}
             {{- end }}
             {{- with .Values.envFrom }}
             {{- toYaml . | nindent 12 }}

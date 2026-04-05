@@ -98,6 +98,45 @@ secret:
   # GRAFANA_SERVICE_ACCOUNT_TOKEN: "my-token"
   # DIGITALOCEAN_API_TOKEN: "my-token"
 
+## @section External Secrets Operator
+## Syncs credentials from a SecretStore into a Kubernetes Secret; the Deployment mounts
+## that Secret via envFrom.
+##
+## Mutually exclusive with vault.enabled (Banzai Cloud Vault webhook). Do not enable both.
+## If target.name is unset, it defaults to the chart fullname (same as secret.enabled). In
+## that case keep secret.enabled false to avoid two writers for one Secret.
+externalSecrets:
+  ## @param externalSecrets.enabled Create an ExternalSecret and mount its target Secret
+  enabled: false
+  ## @param externalSecrets.apiVersion external-secrets.io API version (v1 or v1beta1)
+  apiVersion: external-secrets.io/v1
+  ## @param externalSecrets.refreshInterval How often ESO reconciles the remote secret
+  refreshInterval: 1h
+  ## @param externalSecrets.secretStoreRef.name SecretStore or ClusterSecretStore resource name
+  secretStoreRef:
+    name: ""
+    ## @param externalSecrets.secretStoreRef.kind SecretStore or ClusterSecretStore
+    kind: ClusterSecretStore
+  target:
+    ## @param externalSecrets.target.name Kubernetes Secret to create (default: chart fullname)
+    name: ""
+    ## @param externalSecrets.target.creationPolicy ESO creationPolicy (e.g. Owner, Merge)
+    creationPolicy: Owner
+  ## @param externalSecrets.annotations Annotations on the ExternalSecret resource
+  annotations: {}
+  ## @param externalSecrets.labels Extra labels on the ExternalSecret resource
+  labels: {}
+  ## @param externalSecrets.data ESO spec.data entries (remoteRef -> secretKey)
+  data: []
+  # - secretKey: API_TOKEN
+  #   remoteRef:
+  #     key: my-aws-secret
+  #     property: token
+  ## @param externalSecrets.dataFrom ESO spec.dataFrom entries (e.g. extract)
+  dataFrom: []
+  # - extract:
+  #     key: path/to/secret
+
 ## @section Service
 service:
   ## @param service.type Kubernetes Service type
@@ -313,8 +352,8 @@ tolerations: []
 affinity: {}
 
 ## @section HashiCorp Vault (Banzai Cloud webhook)
-## When vault is enabled, Vault annotations are added to pods
-## so the Banzai Cloud mutating webhook can inject secrets.
+## When vault is enabled, Vault annotations are added to pods so the Banzai Cloud
+## mutating webhook can inject secrets. Mutually exclusive with externalSecrets.enabled.
 vault:
   ## @param vault.enabled Enable Vault annotations on pods
   enabled: false

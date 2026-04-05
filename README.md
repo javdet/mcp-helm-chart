@@ -174,6 +174,53 @@ volumeMounts:
 | `secret.annotations` | Annotations added to the Secret | `{}` |
 | `secret.data` | Key-value pairs stored as `stringData` in the Secret | `{}` |
 
+### Secrets injection (External Secrets vs Vault)
+
+Choose **one** way to supply credentials to the workload:
+
+| Mode | When to use |
+|------|-------------|
+| **Inline Secret** (`secret.enabled`) | Simple manifests; keys live in Helm values (not for production secrets). |
+| **External Secrets Operator** (`externalSecrets.enabled`) | You run [ESO](https://external-secrets.io/) and a `SecretStore` / `ClusterSecretStore`; the chart creates an `ExternalSecret` and mounts the synced Kubernetes `Secret` via `envFrom`. |
+| **Banzai Cloud Vault webhook** (`vault.enabled`) | Your cluster uses the Vault mutating webhook; the chart adds `vault.security.banzaicloud.io/*` pod annotations. |
+
+**Rules:**
+
+- `externalSecrets.enabled` and `vault.enabled` are **mutually exclusive**; Helm fails if both are true.
+- With ESO, keep `secret.enabled` **false** unless `externalSecrets.target.name` points at a **different** Secret name than the chart fullname (otherwise two writers would target the same Secret).
+
+### External Secrets Operator
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `externalSecrets.enabled` | Create an `ExternalSecret` and mount its target `Secret` | `false` |
+| `externalSecrets.apiVersion` | `external-secrets.io` API version (`v1` or `v1beta1`) | `external-secrets.io/v1` |
+| `externalSecrets.refreshInterval` | ESO refresh interval | `1h` |
+| `externalSecrets.secretStoreRef.name` | `SecretStore` / `ClusterSecretStore` name (required if enabled) | `""` |
+| `externalSecrets.secretStoreRef.kind` | Store kind | `ClusterSecretStore` |
+| `externalSecrets.target.name` | Kubernetes `Secret` to sync into (default: chart fullname) | `""` |
+| `externalSecrets.target.creationPolicy` | ESO `creationPolicy` | `Owner` |
+| `externalSecrets.annotations` | Annotations on the `ExternalSecret` | `{}` |
+| `externalSecrets.labels` | Extra labels on the `ExternalSecret` | `{}` |
+| `externalSecrets.data` | `spec.data` entries | `[]` |
+| `externalSecrets.dataFrom` | `spec.dataFrom` entries | `[]` |
+
+Example (sync one remote secret by key; mount as env via `envFrom`):
+
+```yaml
+secret:
+  enabled: false
+
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: my-cluster-store
+    kind: ClusterSecretStore
+  dataFrom:
+    - extract:
+        key: path/to/remote-secret
+```
+
 ### Service
 
 | Parameter | Description | Default |
@@ -255,6 +302,7 @@ Creates a `gateway.envoy.io/v1alpha1` SecurityPolicy targeting the HTTPRoute. Su
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
+| `vault.enabled` | Add Vault webhook annotations on pods | `false` |
 | `vault.role` | Vault role used for Kubernetes authentication | `""` |
 | `vault.path` | Vault auth backend mount path | `""` |
 
