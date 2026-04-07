@@ -8,13 +8,17 @@ on:
 
 permissions:
   contents: write
-  pages: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  CHART_REPO: ghcr.io/${{ github.repository_owner }}/charts
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Helm
@@ -23,129 +27,36 @@ jobs:
       - name: Lint chart
         run: helm lint .
 
+      - name: Extract chart metadata
+        id: meta
+        run: |
+          echo "name=$(yq '.name' Chart.yaml)" >> "$GITHUB_OUTPUT"
+          echo "version=$(yq '.version' Chart.yaml)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login "$REGISTRY" \
+              --username "${{ github.actor }}" \
+              --password-stdin
+
       - name: Package chart
         run: |
-          mkdir -p .cr-release-packages
           helm package . -d .cr-release-packages/
           ls -la .cr-release-packages/
 
-      - name: Build gh-pages content
+      - name: Push to GHCR
         run: |
-          mkdir -p .gh-pages
+          helm push \
+            .cr-release-packages/${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}.tgz \
+            oci://${{ env.CHART_REPO }}
 
-          cp .cr-release-packages/*.tgz .gh-pages/
-
-          # Fetch existing index.yaml to merge with (keeps old versions)
-          curl -fsSL https://javdet.github.io/mcp-helm-chart/index.yaml \
-            -o .gh-pages/old-index.yaml 2>/dev/null && \
-            helm repo index .gh-pages/ \
-              --url https://javdet.github.io/mcp-helm-chart \
-              --merge .gh-pages/old-index.yaml && \
-            rm -f .gh-pages/old-index.yaml || \
-            helm repo index .gh-pages/ \
-              --url https://javdet.github.io/mcp-helm-chart
-
-          cp artifacthub-repo.yml .gh-pages/ 2>/dev/null || true
-          touch .gh-pages/.nojekyll
-
-          # Generate index.html landing page
-          cat > .gh-pages/index.html << 'HTMLEOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>MCP Helm Chart Repository</title>
-            <style>
-              :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-              .container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
-              h1 { font-size: 2rem; margin-bottom: 0.25rem; }
-              .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 1.1rem; }
-              .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
-              .card h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
-              code, pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.9rem; }
-              code { padding: 0.15rem 0.4rem; }
-              pre { padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
-              a { color: var(--accent); text-decoration: none; }
-              a:hover { text-decoration: underline; }
-              .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: #1f6feb33; color: var(--accent); margin-right: 0.5rem; }
-              .versions { list-style: none; }
-              .versions li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-              .versions li:last-child { border-bottom: none; }
-              .ver-tag { font-weight: 600; }
-              .ver-link a { font-size: 0.85rem; }
-              footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>MCP Helm Chart</h1>
-              <p class="subtitle">Universal Helm chart for deploying MCP servers in direct or proxy (supergateway) mode</p>
-
-              <div class="card">
-                <h2>Quick Start</h2>
-                <pre>helm repo add mcp https://javdet.github.io/mcp-helm-chart
-          helm repo update
-          helm install my-mcp-server mcp/mcp -f values.yaml</pre>
-              </div>
-
-              <div class="card" id="versions">
-                <h2>Available Versions</h2>
-                <p style="color: var(--muted);">Loading...</p>
-              </div>
-
-              <div class="card">
-                <h2>Links</h2>
-                <p>
-                  <a href="https://github.com/javdet/mcp-helm-chart">GitHub Repository</a> &middot;
-                  <a href="https://artifacthub.io/packages/helm/mcp/mcp">Artifact Hub</a> &middot;
-                  <a href="index.yaml">index.yaml</a>
-                </p>
-              </div>
-
-              <footer>
-                Helm chart repository hosted on GitHub Pages
-              </footer>
-            </div>
-            <script>
-              fetch('index.yaml')
-                .then(r => r.text())
-                .then(txt => {
-                  const entries = [];
-                  const re = /- apiVersion:.*?\n(?:[\s\S]*?)version:\s*(\S+)[\s\S]*?urls:\s*\n\s*-\s*(\S+)/g;
-                  let m;
-                  const lines = txt.split('\n');
-                  let ver = '', url = '';
-                  for (const line of lines) {
-                    const vm = line.match(/^\s{4}version:\s*(\S+)/);
-                    const um = line.match(/^\s{4}-\s*(https?:\/\/\S+\.tgz)/);
-                    if (vm) ver = vm[1];
-                    if (um) { url = um[1]; entries.push({ver, url}); ver = ''; url = ''; }
-                  }
-                  const el = document.getElementById('versions');
-                  if (entries.length === 0) { el.innerHTML = '<h2>Available Versions</h2><p>No versions found.</p>'; return; }
-                  let html = '<h2>Available Versions</h2><ul class="versions">';
-                  entries.forEach(e => {
-                    html += '<li><span class="ver-tag">' + e.ver + '</span><span class="ver-link"><a href="' + e.url + '">Download .tgz</a></span></li>';
-                  });
-                  html += '</ul>';
-                  el.innerHTML = html;
-                });
-            </script>
-          </body>
-          </html>
-          HTMLEOF
-
-          echo "--- index.yaml ---"
-          cat .gh-pages/index.yaml
-          echo "--- files ---"
-          ls -la .gh-pages/
-
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./.gh-pages
-          force_orphan: true
+          tag_name: ${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}
+          name: ${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}
+          generate_release_notes: true
+          make_latest: "true"
+          files: |
+            .cr-release-packages/${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}.tgz

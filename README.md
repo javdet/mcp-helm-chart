@@ -7,8 +7,7 @@ A universal Helm chart for deploying [Model Context Protocol (MCP)](https://mode
 ## TL;DR
 
 ```bash
-helm repo add mcp https://javdet.github.io/mcp-helm-chart
-helm install my-mcp mcp/mcp -f values.yaml
+helm install my-mcp oci://ghcr.io/javdet/charts/mcp --version 0.4.0 -f values.yaml
 ```
 
 Or install from a local clone:
@@ -30,15 +29,22 @@ Many MCP servers only speak stdio and cannot be deployed as long-running HTTP se
 ## Prerequisites
 
 - Kubernetes >= 1.21
-- Helm >= 3.0
+- Helm >= 3.8 (OCI registry support)
 
 ## Installing the Chart
 
 ```bash
-helm install my-mcp mcp/mcp \
+helm install my-mcp oci://ghcr.io/javdet/charts/mcp \
+  --version 0.4.0 \
   --namespace mcp \
   --create-namespace \
   -f values.yaml
+```
+
+To list available versions:
+
+```bash
+helm show all oci://ghcr.io/javdet/charts/mcp
 ```
 
 ## Uninstalling the Chart
