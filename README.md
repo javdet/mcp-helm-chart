@@ -7,7 +7,7 @@ A universal Helm chart for deploying [Model Context Protocol (MCP)](https://mode
 ## TL;DR
 
 ```bash
-helm install my-mcp oci://ghcr.io/javdet/charts/mcp --version 0.4.0 -f values.yaml
+helm install my-mcp oci://ghcr.io/javdet/charts/mcp --version 0.4.1 -f values.yaml
 ```
 
 Or install from a local clone:
@@ -35,7 +35,7 @@ Many MCP servers only speak stdio and cannot be deployed as long-running HTTP se
 
 ```bash
 helm install my-mcp oci://ghcr.io/javdet/charts/mcp \
-  --version 0.4.0 \
+  --version 0.4.1 \
   --namespace mcp \
   --create-namespace \
   -f values.yaml
