@@ -1,7 +1,7 @@
 {{- $authType := .Values.gatewayApi.auth.type | default "" -}}
 {{- if and .Values.gatewayApi.enabled (or (eq $authType "jwt") (eq $authType "apiKey")) -}}
 ---
-apiVersion: gateway.envoy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
   name: {{ include "mcp.fullname" . }}
