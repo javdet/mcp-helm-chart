@@ -1,86 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MCP Helm Chart Repository</title>
-  <style>
-    :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-    .container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { font-size: 2rem; margin-bottom: 0.25rem; }
-    .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 1.1rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    .card h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
-    code, pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.9rem; }
-    code { padding: 0.15rem 0.4rem; }
-    pre { padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: #1f6feb33; color: var(--accent); margin-right: 0.5rem; }
-    .versions { list-style: none; }
-    .versions li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .versions li:last-child { border-bottom: none; }
-    .ver-tag { font-weight: 600; }
-    .ver-link a { font-size: 0.85rem; }
-    footer { margin-top: 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Helm Chart</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --orange: #d29922;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 820px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+        .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 1.1rem; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+        .badge {
+            display: inline-block;
+            background: #1f6feb33;
+            color: var(--accent);
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        pre {
+            background: #010409;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            margin: 0.75rem 0;
+        }
+        code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+        .comment { color: var(--muted); }
+        .cmd { color: var(--green); }
+        .flag { color: var(--orange); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+        .links a {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.2s;
+        }
+        .links a:hover { border-color: var(--accent); text-decoration: none; }
+        .notice {
+            background: #d2992233;
+            border: 1px solid #d2992266;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .notice strong { color: var(--orange); }
+        table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+        footer { text-align: center; color: var(--muted); margin-top: 3rem; font-size: 0.85rem; }
+    </style>
 </head>
 <body>
-  <div class="container">
+<div class="container">
     <h1>MCP Helm Chart</h1>
     <p class="subtitle">Universal Helm chart for deploying MCP servers in direct or proxy (supergateway) mode</p>
 
-    <div class="card">
-      <h2>Quick Start</h2>
-      <pre>helm repo add mcp https://javdet.github.io/mcp-helm-chart
-helm repo update
-helm install my-mcp-server mcp/mcp -f values.yaml</pre>
-    </div>
-
-    <div class="card" id="versions">
-      <h2>Available Versions</h2>
-      <p style="color: var(--muted);">Loading...</p>
+    <div class="notice">
+        <strong>&#9888; Distribution changed:</strong> Starting from v0.4.1 the chart is published as an
+        <strong>OCI artifact</strong> on GitHub Container Registry.
+        The legacy <code>helm repo add</code> method is no longer updated.
     </div>
 
     <div class="card">
-      <h2>Links</h2>
-      <p>
-        <a href="https://github.com/javdet/mcp-helm-chart">GitHub Repository</a> &middot;
-        <a href="https://artifacthub.io/packages/helm/mcp/mcp">Artifact Hub</a> &middot;
-        <a href="index.yaml">index.yaml</a>
-      </p>
+        <h2>Install <span class="badge">OCI</span></h2>
+<pre><code><span class="comment"># Helm 3.8+ required (OCI support)</span>
+<span class="cmd">helm</span> install my-mcp oci://ghcr.io/javdet/charts/mcp \
+  <span class="flag">--version</span> 0.4.1 \
+  <span class="flag">--namespace</span> mcp \
+  <span class="flag">--create-namespace</span> \
+  <span class="flag">-f</span> values.yaml</code></pre>
     </div>
 
-    <footer>
-      Helm chart repository hosted on GitHub Pages
-    </footer>
-  </div>
-  <script>
-    fetch('index.yaml')
-      .then(r => r.text())
-      .then(txt => {
-        const entries = [];
-        const re = /- apiVersion:.*?\n(?:[\s\S]*?)version:\s*(\S+)[\s\S]*?urls:\s*\n\s*-\s*(\S+)/g;
-        let m;
-        const lines = txt.split('\n');
-        let ver = '', url = '';
-        for (const line of lines) {
-          const vm = line.match(/^\s{4}version:\s*(\S+)/);
-          const um = line.match(/^\s{4}-\s*(https?:\/\/\S+\.tgz)/);
-          if (vm) ver = vm[1];
-          if (um) { url = um[1]; entries.push({ver, url}); ver = ''; url = ''; }
-        }
-        const el = document.getElementById('versions');
-        if (entries.length === 0) { el.innerHTML = '<h2>Available Versions</h2><p>No versions found.</p>'; return; }
-        let html = '<h2>Available Versions</h2><ul class="versions">';
-        entries.forEach(e => {
-          html += '<li><span class="ver-tag">' + e.ver + '</span><span class="ver-link"><a href="' + e.url + '">Download .tgz</a></span></li>';
-        });
-        html += '</ul>';
-        el.innerHTML = html;
-      });
-  </script>
+    <div class="card">
+        <h2>Other commands</h2>
+<pre><code><span class="comment"># Pull chart tarball</span>
+<span class="cmd">helm</span> pull oci://ghcr.io/javdet/charts/mcp <span class="flag">--version</span> 0.4.1
+
+<span class="comment"># Show chart info</span>
+<span class="cmd">helm</span> show all oci://ghcr.io/javdet/charts/mcp
+
+<span class="comment"># Template locally</span>
+<span class="cmd">helm</span> template my-mcp oci://ghcr.io/javdet/charts/mcp <span class="flag">--version</span> 0.4.1 <span class="flag">-f</span> values.yaml</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Helmfile</h2>
+<pre><code><span class="comment"># helmfile.yaml</span>
+repositories:
+  - name: mcp-chart
+    url: ghcr.io/javdet/charts
+    oci: true
+
+releases:
+  - name: my-mcp-server
+    namespace: mcp
+    chart: mcp-chart/mcp
+    version: 0.4.1
+    values:
+      - values.yaml</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Legacy versions (no longer updated)</h2>
+        <p style="color: var(--muted); margin-bottom: 0.5rem;">These versions remain available via the old Helm repo for backward compatibility.</p>
+        <table>
+            <thead><tr><th>Version</th><th>Created</th></tr></thead>
+            <tbody>
+                <tr><td>0.4.0</td><td>2026-04-05</td></tr>
+                <tr><td>0.3.0</td><td>2026-03-29</td></tr>
+                <tr><td>0.2.0</td><td>2026-03-29</td></tr>
+                <tr><td>0.1.0</td><td>2026-03-24</td></tr>
+            </tbody>
+        </table>
+<pre><code><span class="comment"># Legacy install (versions ≤ 0.4.0 only)</span>
+<span class="cmd">helm</span> repo add mcp https://javdet.github.io/mcp-helm-chart
+<span class="cmd">helm</span> repo update
+<span class="cmd">helm</span> install my-mcp mcp/mcp <span class="flag">--version</span> 0.4.0</code></pre>
+    </div>
+
+    <div class="links">
+        <a href="https://github.com/javdet/mcp-helm-chart">GitHub Repository</a>
+        <a href="https://artifacthub.io/packages/helm/mcp/mcp">Artifact Hub</a>
+        <a href="https://github.com/javdet/mcp-helm-chart/pkgs/container/charts%2Fmcp">GHCR Package</a>
+    </div>
+
+    <footer>Helm chart repository hosted on GitHub Pages &middot; OCI artifacts on GHCR</footer>
+</div>
 </body>
 </html>
