@@ -388,3 +388,19 @@ rbac:
   clusterRole: ""
   ## @param rbac.rules Custom ClusterRole rules (used only when rbac.clusterRole is empty)
   rules: []
+
+## @section ConfigMap
+## Optionally render configuration files into a chart-managed ConfigMap and mount
+## it into the container. Use for non-secret config (e.g. a server config file).
+## For secret-bearing files, prefer a Secret volume via volumes/volumeMounts.
+configMap:
+  ## @param configMap.enabled Create a ConfigMap and mount it into the container
+  enabled: false
+  ## @param configMap.mountPath Directory where the ConfigMap keys are mounted as files
+  mountPath: /config
+  ## @param configMap.annotations Annotations added to the ConfigMap
+  annotations: {}
+  ## @param configMap.data Map of filename -> file content rendered into the ConfigMap
+  data: {}
+  # config.yaml: |
+  #   key: value

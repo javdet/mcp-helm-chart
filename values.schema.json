@@ -170,6 +170,32 @@
         }
       }
     },
+    "configMap": {
+      "type": "object",
+      "description": "Optionally render config files into a chart-managed ConfigMap and mount it",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Create a ConfigMap and mount it into the container"
+        },
+        "mountPath": {
+          "type": "string",
+          "default": "/config",
+          "description": "Directory where the ConfigMap keys are mounted as files"
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Annotations added to the ConfigMap"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Map of filename -> file content rendered into the ConfigMap"
+        }
+      }
+    },
     "externalSecrets": {
       "type": "object",
       "description": "External Secrets Operator configuration",
