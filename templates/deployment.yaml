@@ -106,7 +106,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- if or .Values.volumeMounts .Values.configMap.enabled }}
           volumeMounts:
             {{- if .Values.configMap.enabled }}
             - name: config
