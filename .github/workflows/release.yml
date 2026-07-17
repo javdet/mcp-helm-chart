@@ -13,16 +13,17 @@ permissions:
 env:
   REGISTRY: ghcr.io
   CHART_REPO: ghcr.io/${{ github.repository_owner }}/charts
+  PAGES_URL: https://javdet.github.io/mcp-helm-chart
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Lint chart
         run: helm lint .
@@ -33,26 +34,67 @@ jobs:
           echo "name=$(yq '.name' Chart.yaml)" >> "$GITHUB_OUTPUT"
           echo "version=$(yq '.version' Chart.yaml)" >> "$GITHUB_OUTPUT"
 
+      - name: Check if version already released
+        id: check
+        run: |
+          tag="${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}"
+          if git ls-remote --tags origin "refs/tags/$tag" | grep -q "$tag"; then
+            echo "Version $tag already released, skipping."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package chart
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          helm package . -d .cr-release-packages/
+          ls -la .cr-release-packages/
+
       - name: Login to GHCR
+        if: steps.check.outputs.exists == 'false'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             helm registry login "$REGISTRY" \
               --username "${{ github.actor }}" \
               --password-stdin
 
-      - name: Package chart
-        run: |
-          helm package . -d .cr-release-packages/
-          ls -la .cr-release-packages/
-
-      - name: Push to GHCR
+      - name: Push to GHCR (OCI)
+        if: steps.check.outputs.exists == 'false'
         run: |
           helm push \
             .cr-release-packages/${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}.tgz \
             oci://${{ env.CHART_REPO }}
 
+      - name: Checkout gh-pages
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Publish to Helm repo (GitHub Pages)
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cp .cr-release-packages/*.tgz gh-pages/
+          cp values.schema.json gh-pages/ 2>/dev/null || true
+          # Rebuild the repo index, merging with the existing one so older
+          # entries (including OCI-only versions) keep their metadata/timestamps.
+          helm repo index gh-pages --url "$PAGES_URL" --merge gh-pages/index.yaml
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Publish ${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }} to Helm repo"
+            git push
+          fi
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}
           name: ${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }}
