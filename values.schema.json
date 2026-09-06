@@ -102,7 +102,7 @@
           "properties": {
             "package": {
               "type": "string",
-              "default": "@michlyn/mcpgateway",
+              "default": "supergateway",
               "description": "NPM package used as the HTTP gateway"
             },
             "stdioCommand": {
@@ -111,9 +111,9 @@
             },
             "outputTransport": {
               "type": "string",
-              "enum": ["streamable-http", "sse"],
-              "default": "streamable-http",
-              "description": "HTTP transport protocol exposed by the gateway"
+              "enum": ["streamableHttp", "sse", "ws", "streamable-http"],
+              "default": "streamableHttp",
+              "description": "Transport exposed by the gateway ('streamable-http' is a deprecated alias of 'streamableHttp')"
             },
             "port": {
               "type": "integer",
@@ -125,7 +125,58 @@
             "httpPath": {
               "type": "string",
               "default": "/mcp",
-              "description": "HTTP path for the MCP endpoint"
+              "description": "HTTP path for the MCP endpoint (--streamableHttpPath or --ssePath)"
+            },
+            "messagePath": {
+              "type": "string",
+              "default": "/message",
+              "description": "Path clients POST messages to (sse and ws transports)"
+            },
+            "baseUrl": {
+              "type": "string",
+              "default": "",
+              "description": "Public base URL advertised to SSE clients"
+            },
+            "stateful": {
+              "type": "boolean",
+              "default": false,
+              "description": "Keep MCP sessions in memory (streamableHttp only)"
+            },
+            "sessionTimeout": {
+              "type": ["integer", "string"],
+              "default": "",
+              "description": "Session timeout in milliseconds (stateful streamableHttp only)"
+            },
+            "logLevel": {
+              "type": "string",
+              "enum": ["debug", "info", "none"],
+              "default": "info",
+              "description": "Gateway log level"
+            },
+            "healthEndpoints": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Extra paths that return \"ok\", usable by probes"
+            },
+            "cors": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable CORS on the gateway"
+                },
+                "origins": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Allowed origins; empty means all"
+                }
+              }
+            },
+            "extraArgs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Additional supergateway CLI arguments"
             }
           }
         }

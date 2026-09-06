@@ -3,6 +3,52 @@ entries:
   mcp:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Proxy mode now uses the actively maintained supergateway package instead of @michlyn/mcpgateway
+        - kind: changed
+          description: 'proxy.gateway.outputTransport default is now streamableHttp; the legacy streamable-http value is still accepted'
+        - kind: added
+          description: New proxy.gateway options - messagePath, baseUrl, stateful, sessionTimeout, logLevel, healthEndpoints, cors and extraArgs
+        - kind: added
+          description: ws output transport for proxy mode
+      artifacthub.io/containsSecurityUpdates: "false"
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Source
+          url: https://github.com/javdet/mcp-helm-chart
+        - name: MCP Protocol
+          url: https://modelcontextprotocol.io/
+        - name: supergateway
+          url: https://github.com/supercorp-ai/supergateway
+    apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-09-06T07:05:26.751420593Z"
+    description: Universal Helm chart for deploying MCP servers in direct or proxy
+      (supergateway) mode
+    digest: 02e0be26cd0aa1db07ce4d3235ff0f949a2863a1296badaa1a86794ca6c97e9c
+    home: https://github.com/javdet/mcp-helm-chart
+    icon: https://raw.githubusercontent.com/javdet/mcp-helm-chart/main/icon.svg
+    keywords:
+    - mcp
+    - model-context-protocol
+    - ai
+    - supergateway
+    - kubernetes
+    - llm
+    - gateway
+    kubeVersion: '>=1.21.0-0'
+    maintainers:
+    - name: javdet
+      url: https://github.com/javdet
+    name: mcp
+    sources:
+    - https://github.com/javdet/mcp-helm-chart
+    type: application
+    urls:
+    - https://javdet.github.io/mcp-helm-chart/mcp-0.6.0.tgz
+    version: 0.6.0
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Initial release with direct and proxy deployment modes
       artifacthub.io/containsSecurityUpdates: "false"
@@ -14,7 +60,7 @@ entries:
           url: https://modelcontextprotocol.io/
     apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-07-17T09:13:01.234843975Z"
+    created: "2026-09-06T07:05:26.750413276Z"
     description: Universal Helm chart for deploying MCP servers in direct or proxy
       (supergateway) mode
     digest: 63869990f364c1bc9980a6daceb82783469797af42e56aeaff4ebd187f58ffe5
@@ -52,7 +98,7 @@ entries:
           url: https://modelcontextprotocol.io/
     apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-07-17T09:13:01.233785521Z"
+    created: "2026-09-06T07:05:26.749470003Z"
     description: Universal Helm chart for deploying MCP servers in direct or proxy
       (supergateway) mode
     digest: 596317b902e13a2d6a3709329caba3727a822e7c971d4de11dacb47a1223e76e
@@ -133,7 +179,7 @@ entries:
           url: https://modelcontextprotocol.io/
     apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-07-17T09:13:01.231391072Z"
+    created: "2026-09-06T07:05:26.748180783Z"
     description: Universal Helm chart for deploying MCP servers in direct or proxy
       (supergateway) mode
     digest: b72a28e773a326a79f0e1085171eb62db07240b060a8a3d169bd7729b81e04a1
@@ -272,4 +318,4 @@ entries:
     urls:
     - https://javdet.github.io/mcp-helm-chart/mcp-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-17T09:13:01.2302479Z"
+generated: "2026-09-06T07:05:26.747014503Z"
