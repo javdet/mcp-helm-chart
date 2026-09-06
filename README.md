@@ -7,7 +7,7 @@ A universal Helm chart for deploying [Model Context Protocol (MCP)](https://mode
 ## TL;DR
 
 ```bash
-helm install my-mcp oci://ghcr.io/javdet/charts/mcp --version 0.4.1 -f values.yaml
+helm install my-mcp oci://ghcr.io/javdet/charts/mcp --version 0.6.0 -f values.yaml
 ```
 
 Or install from a local clone:
@@ -24,7 +24,7 @@ Many MCP servers only speak stdio and cannot be deployed as long-running HTTP se
 | Mode | When to use | How it works |
 |------|-------------|--------------|
 | `direct` | The MCP server image already supports HTTP/SSE (e.g. `grafana/mcp-grafana`) | Deploys the image as-is with optional `command`/`args` overrides |
-| `proxy` | The MCP server is stdio-only (e.g. `@digitalocean/mcp`, `kubernetes-mcp-server`) | Runs a Node.js sidecar with [supergateway](https://github.com/nicolo-ribaudo/supergateway)/[@michlyn/mcpgateway](https://www.npmjs.com/package/@michlyn/mcpgateway) that wraps the stdio command into Streamable HTTP |
+| `proxy` | The MCP server is stdio-only (e.g. `@digitalocean/mcp`, `kubernetes-mcp-server`) | Runs a Node.js container with [supergateway](https://github.com/supercorp-ai/supergateway) that wraps the stdio command into Streamable HTTP, SSE or WebSocket |
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ Many MCP servers only speak stdio and cannot be deployed as long-running HTTP se
 
 ```bash
 helm install my-mcp oci://ghcr.io/javdet/charts/mcp \
-  --version 0.4.1 \
+  --version 0.6.0 \
   --namespace mcp \
   --create-namespace \
   -f values.yaml
@@ -92,7 +92,7 @@ containerPort: 8080
 proxy:
   gateway:
     stdioCommand: "npx -y @digitalocean/mcp --services apps,droplets,doks,networking"
-    outputTransport: streamable-http
+    outputTransport: streamableHttp
     port: 8080
     httpPath: /mcp
 
@@ -159,11 +159,20 @@ volumeMounts:
 | `proxy.image.repository` | Proxy container image repository | `node` |
 | `proxy.image.tag` | Proxy container image tag | `20-slim` |
 | `proxy.image.pullPolicy` | Proxy image pull policy | `IfNotPresent` |
-| `proxy.gateway.package` | NPM package used as the HTTP gateway | `@michlyn/mcpgateway` |
+| `proxy.gateway.package` | NPM package used as the HTTP gateway (pin a version, e.g. `supergateway@3.4.3`, for reproducible rollouts) | `supergateway` |
 | `proxy.gateway.stdioCommand` | The stdio MCP command to wrap (required in proxy mode) | `""` |
-| `proxy.gateway.outputTransport` | HTTP transport protocol exposed by the gateway | `streamable-http` |
+| `proxy.gateway.outputTransport` | Transport exposed by the gateway: `streamableHttp`, `sse` or `ws` | `streamableHttp` |
 | `proxy.gateway.port` | Port the gateway listens on (should match `containerPort`) | `8080` |
-| `proxy.gateway.httpPath` | HTTP path for the MCP endpoint | `/mcp` |
+| `proxy.gateway.httpPath` | MCP endpoint path — `--streamableHttpPath` for `streamableHttp`, `--ssePath` for `sse` | `/mcp` |
+| `proxy.gateway.messagePath` | Path clients POST messages to (`sse` and `ws` only) | `/message` |
+| `proxy.gateway.baseUrl` | Public base URL advertised to SSE clients (`sse` only) | `""` |
+| `proxy.gateway.stateful` | Keep MCP sessions in memory (`streamableHttp` only) | `false` |
+| `proxy.gateway.sessionTimeout` | Session timeout in milliseconds (stateful `streamableHttp` only) | `""` |
+| `proxy.gateway.logLevel` | Gateway log level: `debug`, `info` or `none` | `info` |
+| `proxy.gateway.healthEndpoints` | Extra paths that return `ok`, usable by probes | `[]` |
+| `proxy.gateway.cors.enabled` | Enable CORS on the gateway | `false` |
+| `proxy.gateway.cors.origins` | Allowed origins; empty means all (`*`). Wrap in slashes for a regex | `[]` |
+| `proxy.gateway.extraArgs` | Additional supergateway CLI arguments | `[]` |
 
 ### Environment variables
 
@@ -391,14 +400,61 @@ gatewayApi:
 In proxy mode the chart launches a `node:20-slim` container and runs:
 
 ```
-npx -y @michlyn/mcpgateway \
+npx -y supergateway \
   --stdio '<your stdioCommand>' \
-  --outputTransport streamable-http \
+  --outputTransport streamableHttp \
   --port 8080 \
-  --httpPath /mcp
+  --streamableHttpPath '/mcp' \
+  --logLevel info
 ```
 
 The gateway spawns the stdio MCP server as a child process, translates stdio messages to/from HTTP, and exposes a Streamable HTTP endpoint that any MCP client can connect to.
+
+Additional flags are appended from the values above: `--stateful`/`--sessionTimeout` for session-bound servers,
+`--healthEndpoint` for probe targets, `--cors` for browser clients, and anything in `proxy.gateway.extraArgs`.
+
+### Health probes in proxy mode
+
+`supergateway` has no health endpoint by default, so the chart's probes fall back to `tcpSocket`. To probe over
+HTTP instead, register an endpoint and point the probes at it. Values are merged with the chart defaults, so set
+`tcpSocket: null` as well — otherwise the probe ends up with two handlers and the API server rejects it:
+
+```yaml
+proxy:
+  gateway:
+    healthEndpoints:
+      - /healthz
+
+probes:
+  livenessProbe:
+    tcpSocket: null
+    httpGet:
+      path: /healthz
+      port: http
+  readinessProbe:
+    tcpSocket: null
+    httpGet:
+      path: /healthz
+      port: http
+```
+
+### Stateful sessions
+
+Servers that keep state between requests need `proxy.gateway.stateful: true`. Sessions live in the pod's memory,
+so with `replicaCount` above 1 the ingress or Gateway must pin a session to one pod, otherwise follow-up requests
+land on a pod that does not know the session.
+
+## Migrating from 0.5.x
+
+Releases up to 0.5.1 used `@michlyn/mcpgateway`, which is no longer actively maintained. 0.6.0 switches the
+default to [supergateway](https://github.com/supercorp-ai/supergateway). If you did not override
+`proxy.gateway.package`, no values change is required — `outputTransport: streamable-http` is still accepted and
+normalized to `streamableHttp`. Two things to check:
+
+- `proxy.gateway.httpPath` is now rendered as `--streamableHttpPath` (or `--ssePath`) instead of `--httpPath`.
+  The default `/mcp` endpoint is unchanged.
+- If you pinned `proxy.gateway.package` to `@michlyn/mcpgateway`, remove the override, or keep it and also set
+  `proxy.gateway.extraArgs` accordingly — the two packages do not share a CLI.
 
 ## License
 

@@ -50,12 +50,7 @@ spec:
           command:
             - sh
             - -c
-            - >-
-              npx -y {{ .Values.proxy.gateway.package }}
-              --stdio '{{ required "proxy.gateway.stdioCommand is required in proxy mode" .Values.proxy.gateway.stdioCommand }}'
-              --outputTransport {{ .Values.proxy.gateway.outputTransport }}
-              --port {{ .Values.proxy.gateway.port | int }}
-              --httpPath {{ .Values.proxy.gateway.httpPath }}
+            - {{ include "mcp.proxyCommand" . | quote }}
           {{- else }}
           image: "{{ required "image.repository is required in direct mode" .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}

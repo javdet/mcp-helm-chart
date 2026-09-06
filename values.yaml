@@ -46,6 +46,7 @@ args: []
 ## @section Proxy mode configuration
 ## Used when mode=proxy. Runs a Node.js container with supergateway to wrap
 ## stdio-only MCP servers into an HTTP-compatible transport.
+## See https://github.com/supercorp-ai/supergateway for the full CLI reference.
 proxy:
   image:
     ## @param proxy.image.repository Proxy container image repository
@@ -56,17 +57,47 @@ proxy:
     pullPolicy: IfNotPresent
   gateway:
     ## @param proxy.gateway.package NPM package used as the HTTP gateway
-    package: "@michlyn/mcpgateway"
+    ## Pin a version for reproducible rollouts, e.g. "supergateway@3.4.3"
+    package: "supergateway"
     ## @param proxy.gateway.stdioCommand The stdio MCP command to wrap
     ## Example: "npx -y kubernetes-mcp-server@latest"
     ## Example: "npx -y @digitalocean/mcp --services apps,droplets,doks,networking"
     stdioCommand: ""
-    ## @param proxy.gateway.outputTransport HTTP transport protocol exposed by the gateway
-    outputTransport: streamable-http
+    ## @param proxy.gateway.outputTransport Transport exposed by the gateway: streamableHttp, sse or ws
+    ## The legacy value "streamable-http" is still accepted and normalized to streamableHttp.
+    outputTransport: streamableHttp
     ## @param proxy.gateway.port Port the gateway listens on (should match containerPort)
     port: 8080
     ## @param proxy.gateway.httpPath HTTP path for the MCP endpoint
+    ## Rendered as --streamableHttpPath (streamableHttp) or --ssePath (sse). Unused for ws.
     httpPath: /mcp
+    ## @param proxy.gateway.messagePath Path clients POST messages to (sse and ws only)
+    messagePath: /message
+    ## @param proxy.gateway.baseUrl Public base URL advertised to SSE clients (sse only)
+    baseUrl: ""
+    ## @param proxy.gateway.stateful Keep MCP sessions in memory (streamableHttp only)
+    ## Required by servers that rely on session state between requests. With replicaCount > 1
+    ## you also need sticky sessions at the ingress/gateway, or requests may hit another pod.
+    stateful: false
+    ## @param proxy.gateway.sessionTimeout Session timeout in milliseconds (stateful streamableHttp only)
+    ## Empty means sessions live until the client terminates them.
+    sessionTimeout: ""
+    ## @param proxy.gateway.logLevel Gateway log level: debug, info or none
+    logLevel: info
+    ## @param proxy.gateway.healthEndpoints Extra paths that return "ok", usable by probes
+    healthEndpoints: []
+    # - /healthz
+    ## @param proxy.gateway.cors.enabled Enable CORS on the gateway
+    cors:
+      enabled: false
+      ## @param proxy.gateway.cors.origins Allowed origins; empty means all ("*").
+      ## A value wrapped in slashes is treated as a regex, e.g. "/example\\.com$/"
+      origins: []
+      # - https://app.example.com
+    ## @param proxy.gateway.extraArgs Additional supergateway CLI arguments
+    extraArgs: []
+    # - --header
+    # - "x-user-id: 123"
 
 ## @section Environment variables
 ## @param env Extra environment variables injected into the container
@@ -306,7 +337,9 @@ resources: {}
 ## @section Probes
 ## Health checks for the MCP server container.
 ## Set to empty map or false to disable individual probes.
-## Common health paths: /healthz (kubernetes-mcp-server), /health, /mcp (supergateway)
+## Common health paths: /healthz (kubernetes-mcp-server), /health
+## In proxy mode supergateway exposes no health path by default; add one via
+## proxy.gateway.healthEndpoints, then set tcpSocket: null here alongside httpGet.
 ## Use tcpSocket probe as a universal fallback if the MCP server has no health endpoint.
 probes:
   ## @param probes.livenessProbe Liveness probe configuration

@@ -2,7 +2,7 @@
 apiVersion: v2
 kubeVersion: '>=1.21.0-0'
 name: mcp
-version: 0.5.1
+version: 0.6.0
 appVersion: '1.0.0'
 description: Universal Helm chart for deploying MCP servers in direct or proxy (supergateway) mode
 home: https://github.com/javdet/mcp-helm-chart
@@ -28,7 +28,15 @@ annotations:
       url: https://github.com/javdet/mcp-helm-chart
     - name: MCP Protocol
       url: https://modelcontextprotocol.io/
+    - name: supergateway
+      url: https://github.com/supercorp-ai/supergateway
   artifacthub.io/changes: |
+    - kind: changed
+      description: Proxy mode now uses the actively maintained supergateway package instead of @michlyn/mcpgateway
+    - kind: changed
+      description: 'proxy.gateway.outputTransport default is now streamableHttp; the legacy streamable-http value is still accepted'
     - kind: added
-      description: Initial release with direct and proxy deployment modes
+      description: New proxy.gateway options - messagePath, baseUrl, stateful, sessionTimeout, logLevel, healthEndpoints, cors and extraArgs
+    - kind: added
+      description: ws output transport for proxy mode
   artifacthub.io/containsSecurityUpdates: "false"

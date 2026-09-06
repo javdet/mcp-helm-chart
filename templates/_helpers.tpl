@@ -101,3 +101,73 @@ otherwise uses the default ServiceAccount.
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Normalize proxy.gateway.outputTransport to the value supergateway expects.
+Accepts the legacy "streamable-http" spelling used by the previous gateway package.
+*/}}
+{{- define "mcp.proxyTransport" -}}
+{{- $raw := .Values.proxy.gateway.outputTransport | default "streamableHttp" -}}
+{{- $normalized := $raw | lower | replace "-" "" | replace "_" "" -}}
+{{- if eq $normalized "streamablehttp" -}}
+streamableHttp
+{{- else if eq $normalized "sse" -}}
+sse
+{{- else if eq $normalized "ws" -}}
+ws
+{{- else -}}
+{{- fail (printf "proxy.gateway.outputTransport %q is not supported; use streamableHttp, sse or ws" $raw) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Full supergateway command line for proxy mode, rendered as a single shell string.
+*/}}
+{{- define "mcp.proxyCommand" -}}
+{{- $gw := .Values.proxy.gateway -}}
+{{- $transport := include "mcp.proxyTransport" . -}}
+{{- $stdio := required "proxy.gateway.stdioCommand is required in proxy mode" $gw.stdioCommand -}}
+{{- $args := list "npx" "-y" ($gw.package | default "supergateway" | squote) -}}
+{{- $args = concat $args (list "--stdio" ($stdio | squote)) -}}
+{{- $args = concat $args (list "--outputTransport" $transport) -}}
+{{- $args = concat $args (list "--port" ($gw.port | int | toString)) -}}
+{{- if eq $transport "streamableHttp" -}}
+{{- $args = concat $args (list "--streamableHttpPath" ($gw.httpPath | default "/mcp" | squote)) -}}
+{{- if $gw.stateful -}}
+{{- $args = concat $args (list "--stateful") -}}
+{{- if $gw.sessionTimeout -}}
+{{- $args = concat $args (list "--sessionTimeout" ($gw.sessionTimeout | int | toString)) -}}
+{{- end -}}
+{{- end -}}
+{{- else if eq $transport "sse" -}}
+{{- $args = concat $args (list "--ssePath" ($gw.httpPath | default "/sse" | squote)) -}}
+{{- $args = concat $args (list "--messagePath" ($gw.messagePath | default "/message" | squote)) -}}
+{{- if $gw.baseUrl -}}
+{{- $args = concat $args (list "--baseUrl" ($gw.baseUrl | squote)) -}}
+{{- end -}}
+{{- else -}}
+{{- $args = concat $args (list "--messagePath" ($gw.messagePath | default "/message" | squote)) -}}
+{{- end -}}
+{{- if $gw.logLevel -}}
+{{- $args = concat $args (list "--logLevel" $gw.logLevel) -}}
+{{- end -}}
+{{- range $gw.healthEndpoints | default list -}}
+{{- $args = concat $args (list "--healthEndpoint" (. | squote)) -}}
+{{- end -}}
+{{- with $gw.extraArgs -}}
+{{- range . -}}
+{{- $args = concat $args (list (. | toString | squote)) -}}
+{{- end -}}
+{{- end -}}
+{{- if $gw.cors.enabled -}}
+{{- $origins := $gw.cors.origins | default list -}}
+{{- if eq (len $origins) 0 -}}
+{{- $args = concat $args (list "--cors" "'*'") -}}
+{{- else -}}
+{{- range $origins -}}
+{{- $args = concat $args (list "--cors" (. | squote)) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- join " " $args -}}
+{{- end }}
