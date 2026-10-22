@@ -272,6 +272,39 @@ gatewayApi:
       #   kind: Secret
       #   name: mcp-api-keys
 
+## @section Envoy AI Gateway backend
+## Registers this server as an upstream for Envoy AI Gateway MCPRoutes. The MCPRoute that lists
+## backends (and so decides who sees this server) is not part of this chart.
+## Requires Envoy Gateway with extensionApis.enableBackend: true.
+aiGateway:
+  backend:
+    ## @param aiGateway.backend.enabled Create a gateway.envoyproxy.io/v1alpha1 Backend pointing at the chart Service
+    enabled: false
+    ## @param aiGateway.backend.name Backend name, also the tool prefix on the gateway (<name>__<tool>); defaults to fullname
+    name: ""
+    ## @param aiGateway.backend.hostname Upstream FQDN; defaults to <fullname>.<namespace>.svc.<clusterDomain>
+    hostname: ""
+    ## @param aiGateway.backend.clusterDomain Cluster DNS domain used for the default hostname
+    clusterDomain: cluster.local
+    ## @param aiGateway.backend.port Upstream port; defaults to service.port
+    port: null
+    ## @param aiGateway.backend.labels Extra labels on the Backend
+    labels: {}
+    ## @param aiGateway.backend.annotations Annotations on the Backend (e.g. helm.sh/resource-policy: keep)
+    annotations: {}
+  ## Secret for MCPRoute backendRefs[].securityPolicy.apiKey.secretRef, for servers that require a bearer.
+  upstreamSecret:
+    ## @param aiGateway.upstreamSecret.enabled Create the Secret with the bearer the gateway injects upstream
+    enabled: false
+    ## @param aiGateway.upstreamSecret.name Secret name; defaults to <fullname>-upstream
+    name: ""
+    ## @param aiGateway.upstreamSecret.apiKey Bearer value, stored under key apiKey; a vault: reference works when vault.enabled
+    apiKey: ""
+    ## @param aiGateway.upstreamSecret.labels Extra labels on the Secret
+    labels: {}
+    ## @param aiGateway.upstreamSecret.annotations Annotations on the Secret, merged with the Vault ones
+    annotations: {}
+
 ## @section ServiceAccount
 serviceAccount:
   ## @param serviceAccount.create Create a ServiceAccount resource

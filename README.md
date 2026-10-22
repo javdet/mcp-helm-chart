@@ -276,6 +276,25 @@ Creates a `gateway.envoy.io/v1alpha1` SecurityPolicy targeting the HTTPRoute. Su
 | `gatewayApi.auth.apiKey.extractFrom` | Headers from which to extract the API key (used when `auth.type=apiKey`) | Authorization Bearer |
 | `gatewayApi.auth.apiKey.credentialRefs` | References to Secrets holding valid API keys | `[]` |
 
+### Envoy AI Gateway backend
+
+Registers the server as an upstream for [Envoy AI Gateway](https://aigateway.envoyproxy.io/) `MCPRoute`s. See [Envoy AI Gateway MCPRoute backend](#envoy-ai-gateway-mcproute-backend).
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `aiGateway.backend.enabled` | Create a `gateway.envoyproxy.io/v1alpha1` Backend pointing at the chart Service | `false` |
+| `aiGateway.backend.name` | Backend name, also the tool prefix on the gateway (`<name>__<tool>`) | fullname |
+| `aiGateway.backend.hostname` | Upstream FQDN | `<fullname>.<namespace>.svc.<clusterDomain>` |
+| `aiGateway.backend.clusterDomain` | Cluster DNS domain used for the default hostname | `cluster.local` |
+| `aiGateway.backend.port` | Upstream port | `service.port` |
+| `aiGateway.backend.labels` | Extra labels on the Backend | `{}` |
+| `aiGateway.backend.annotations` | Annotations on the Backend | `{}` |
+| `aiGateway.upstreamSecret.enabled` | Create a Secret with the bearer the gateway injects upstream | `false` |
+| `aiGateway.upstreamSecret.name` | Secret name | `<fullname>-upstream` |
+| `aiGateway.upstreamSecret.apiKey` | Bearer value, stored under key `apiKey` | `""` |
+| `aiGateway.upstreamSecret.labels` | Extra labels on the Secret | `{}` |
+| `aiGateway.upstreamSecret.annotations` | Annotations on the Secret, merged with the Vault ones | `{}` |
+
 ### ServiceAccount
 
 | Parameter | Description | Default |
@@ -394,6 +413,46 @@ gatewayApi:
           kind: Secret
           name: mcp-api-keys
 ```
+
+## Envoy AI Gateway MCPRoute backend
+
+Envoy AI Gateway federates several MCP servers behind one `MCPRoute`, and the route lists its backends
+itself — a server cannot attach to a route the way an HTTPRoute attaches to a Gateway. The chart therefore
+owns the server side only: the `Backend` the route points at and, if the server requires a bearer, the
+Secret the route injects. Which routes include the server stays with whoever owns the `MCPRoute`.
+
+```yaml
+aiGateway:
+  backend:
+    enabled: true
+    name: wiki                       # tools appear as wiki__<tool>
+    annotations:
+      helm.sh/resource-policy: keep  # routes reference it by name; do not delete it on uninstall
+  upstreamSecret:
+    enabled: true                    # Secret wiki-mcp-upstream for release wiki-mcp
+    apiKey: vault:secret/data/mcp/wiki#token   # resolved by the Banzai webhook when vault.enabled
+```
+
+The matching `MCPRoute` entry:
+
+```yaml
+backendRefs:
+  - group: gateway.envoyproxy.io
+    kind: Backend
+    name: wiki
+    securityPolicy:
+      apiKey:
+        secretRef:
+          name: wiki-mcp-upstream
+```
+
+Requirements and caveats:
+
+- Envoy Gateway must run with `extensionApis.enableBackend: true`.
+- The bearer is rendered into `data`, not `stringData`, so a `vault:` reference is visible to the
+  vault-secrets-webhook. With `failurePolicy: Ignore` on that webhook a failed lookup stores the reference
+  itself — check the resulting Secret after the first install.
+- Remove the backend from every `MCPRoute` before disabling it here.
 
 ## How Proxy Mode Works
 

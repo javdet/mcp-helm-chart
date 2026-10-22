@@ -1,0 +1,22 @@
+{{- if .Values.aiGateway.backend.enabled }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: {{ include "mcp.aiGatewayBackendName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp.labels" . | nindent 4 }}
+    {{- with .Values.aiGateway.backend.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.aiGateway.backend.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  endpoints:
+    - fqdn:
+        hostname: {{ .Values.aiGateway.backend.hostname | default (printf "%s.%s.svc.%s" (include "mcp.fullname" .) .Release.Namespace .Values.aiGateway.backend.clusterDomain) }}
+        port: {{ .Values.aiGateway.backend.port | default .Values.service.port | int }}
+{{- end }}

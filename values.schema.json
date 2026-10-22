@@ -486,6 +486,79 @@
         }
       }
     },
+    "aiGateway": {
+      "type": "object",
+      "description": "Envoy AI Gateway backend registration: a Backend for MCPRoutes and an optional upstream bearer Secret",
+      "properties": {
+        "backend": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Create a gateway.envoyproxy.io/v1alpha1 Backend pointing at the chart Service"
+            },
+            "name": {
+              "type": "string",
+              "description": "Backend name, also the tool prefix on the gateway; defaults to fullname"
+            },
+            "hostname": {
+              "type": "string",
+              "description": "Upstream FQDN; defaults to <fullname>.<namespace>.svc.<clusterDomain>"
+            },
+            "clusterDomain": {
+              "type": "string",
+              "default": "cluster.local",
+              "description": "Cluster DNS domain used for the default hostname"
+            },
+            "port": {
+              "type": ["integer", "null"],
+              "minimum": 1,
+              "maximum": 65535,
+              "description": "Upstream port; defaults to service.port"
+            },
+            "labels": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Extra labels on the Backend"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Annotations on the Backend"
+            }
+          }
+        },
+        "upstreamSecret": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Create the Secret with the bearer the gateway injects upstream"
+            },
+            "name": {
+              "type": "string",
+              "description": "Secret name; defaults to <fullname>-upstream"
+            },
+            "apiKey": {
+              "type": "string",
+              "description": "Bearer value stored under key apiKey; a vault: reference works when vault.enabled"
+            },
+            "labels": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Extra labels on the Secret"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Annotations on the Secret, merged with the Vault ones"
+            }
+          }
+        }
+      }
+    },
     "serviceAccount": {
       "type": "object",
       "description": "ServiceAccount configuration",
