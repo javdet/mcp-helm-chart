@@ -171,3 +171,17 @@ Full supergateway command line for proxy mode, rendered as a single shell string
 {{- end -}}
 {{- join " " $args -}}
 {{- end }}
+
+{{/*
+Envoy AI Gateway Backend name. MCPRoute prefixes every federated tool with it (<name>__<tool>).
+*/}}
+{{- define "mcp.aiGatewayBackendName" -}}
+{{- default (include "mcp.fullname" .) .Values.aiGateway.backend.name | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
+Name of the Secret holding the bearer the gateway injects into requests to this server.
+*/}}
+{{- define "mcp.aiGatewayUpstreamSecretName" -}}
+{{- default (printf "%s-upstream" (include "mcp.fullname" .)) .Values.aiGateway.upstreamSecret.name | trunc 253 | trimSuffix "-" -}}
+{{- end }}
